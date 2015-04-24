@@ -1,0 +1,68 @@
+---
+- hosts: raspi
+  sudo: yes
+  tasks:
+    - name: copy dotfiles
+      copy: src=./.vimrc dest=/home/pi/.vimrc owner=pi group=sudo mode=0644
+
+    - name: add source
+      copy: src=./sources.list dest=/etc/apt/sources.list owner=pi group=sudo mode=0644
+#      apt_repository:
+#        repo='deb-src http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free rpi'
+
+    - name: setup apt preferences
+      copy: src=./preferences dest=/etc/apt/preferences owner=pi group=sudo mode=0644
+
+    - name: update apt
+      apt: update_cache=yes
+
+    - name: install gcc-4.8
+      apt: pkg=gcc-4.8 force=yes
+
+    - name: setup gcc-4.8
+      shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 20
+      shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60
+
+    - name: install ncurses
+      apt: force=yes pkg=ncurses-dev
+
+    - name: wget rpi-source
+      shell: wget "https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source" -O /usr/bin/rpi-source
+
+    - name: init rpi-source
+      shell: chmod +x /usr/bin/rpi-source
+
+    - name: update rpi-source
+      shell: /usr/bin/rpi-source -q --tag-update
+
+    - name: get rpi kernel
+      sudo: no
+      ignore_errors: yes
+      command: rpi-source
+
+    - name: unpack bz2
+      unarchive: src=./mt7610u.bz2 dest=/home/pi/
+
+    - name: clone patch
+      git: dest=/home/pi/patch repo=https://gist.github.com/moutend/80e4aa9488eff395d06e
+
+    - name: patch driver sources
+      shell: patch mt7610u_wifi_sta_v3002_dpo_20130916/os/linux/config.mk    < patch/config.mk.patch
+      shell: patch mt7610u_wifi_sta_v3002_dpo_20130916/include/os/rt_linux.h < patch/rt_linux.h.patch
+      shell: patch mt7610u_wifi_sta_v3002_dpo_20130916/conf/RT2870STA.dat    < patch/RT2870STA.dat.patch
+      shell: patch mt7610u_wifi_sta_v3002_dpo_20130916/common/rtusb_dev_id.c < patch/rtusb_dev_id.c.patch
+
+    - name: install gcc-4.7
+      apt: force=yes pkg=gcc-4.7
+
+    - name: get deb
+      shell: wget "http://www.niksula.hut.fi/~mhiienka/Rpi/linux-headers-rpi/linux-headers-3.18.7-v7%2b_3.18.7-v7%2b-2_armhf.deb"
+
+    - name: swap linux header
+      shell: sudo dpkg -i linux-headers-3.18.7-v7+_3.18.7-v7+-2_armhf.deb
+      shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 20
+      shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.7 40
+      shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60
+
+#    - name: cd into driver and make
+#      shell: make chdir=/home/pi/mt7610u_wifi_sta_v3002_dpo_20130916
