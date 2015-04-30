@@ -1,0 +1,30 @@
+---
+- hosts: raspi
+  user: pi
+  sudo: yes
+  tasks:
+    - name: copy dotfiles
+      # copy: src=./mt7610u.bz2  dest=/home/pi/mt7610u.bz2  owner=pi group=sudo mode=0644
+      copy: src=./.vimrc       dest=/home/pi/.vimrc       owner=pi group=sudo mode=0644
+      sudo: no
+
+    - name: copy sources.list file
+      copy: src=./sources.list dest=/home/pi/sources.list owner=pi group=sudo mode=0644
+
+    - name: copy preferences file
+      copy: src=./preferences  dest=/home/pi/preferences  owner=pi group=sudo mode=0644
+
+    - name: move settings files into /etc/apt
+      shell: cp /home/pi/sources.list /etc/apt/ && cp /home/pi/preferences /etc/apt/
+
+    - name: unpack driver
+      unarchive: src=./driver.bz2 dest=/home/pi/ owner=pi group=sudo mode=0644
+
+    - name: get patch
+      git: dest=/home/pi/gist repo=https://gist.github.com/moutend/80e4aa9488eff395d06e
+
+    - name: apply patch
+      shell: /home/pi/gist/patch.sh
+
+    - name: install packages
+      shell: apt-get update && apt-get install -y vim sysstat ncurses-dev
