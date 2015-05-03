@@ -3,11 +3,6 @@
   user: pi
   sudo: yes
   tasks:
-#    - name: copy dotfiles
-#      # copy: src=./mt7610u.bz2  dest=/home/pi/mt7610u.bz2  owner=pi group=sudo mode=0644
-#      copy: src=./.vimrc       dest=/home/pi/.vimrc       owner=pi group=sudo mode=0644
-#      sudo: no
-
     - name: copy sources.list
       copy: src=./sources.list dest=/home/pi/sources.list owner=pi group=sudo mode=0644
 
