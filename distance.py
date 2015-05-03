@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time
+import time, os, sys, datetime
 import RPi.GPIO as GPIO
+
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
 MAX_OFF = 200
 MAX_ON  = 5000
@@ -50,5 +52,5 @@ def reading():
   return (signal_on - signal_off) * 17000
 
 while True:
-  print reading()
+  print datetime.datetime.now(), reading()
   time.sleep(0.05)
