@@ -3,14 +3,14 @@
   user: pi
   sudo: yes
   tasks:
-    - name: prepare gcc-4.8
+    - name: change priority of gcc-4.8
       shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 20
       shell: update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60
 
-    - name: init rpi-source
+    - name: wget rpi-source
       shell: wget https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source -O /usr/bin/rpi-source && sudo chmod +x /usr/bin/rpi-source && /usr/bin/rpi-source -q --tag-update
 
-    - name: get rpi-source
+    - name: rpi-source
       shell: rpi-source
       ignore_errors: yes
       sudo: no
@@ -18,8 +18,8 @@
     - name: prepare make
       shell: sed -i 's/CONFIG_LOCALVERSION="-v7"/CONFIG_LOCALVERSION="-v7+"/' ./linux/.config
 
-    - name: make the driver
+    - name: make and make install
       shell: make && make install chdir=/home/pi/mt7610u_wifi_sta_v3002_dpo_20130916
 
     - name: load kernel module
-      shell: insmod /lib/modules/3.18.7-v7+/kernel/drivers/net/wireless/mt7650u_sta.ko
+      shell: insmod /lib/modules/`uname -r`/kernel/drivers/net/wireless/mt7650u_sta.ko
