@@ -3,14 +3,15 @@
 
 import time
 import RPi.GPIO as GPIO
-from threading import Timer
 
-def reading(sensor):
+MAX_OFF = 200
+MAX_ON  = 5000
+TRIG    = 11
+ECHO    = 13
+
+def reading():
   GPIO.setwarnings(False)
   GPIO.setmode(GPIO.BOARD)
-
-  TRIG = 11
-  ECHO = 13
 
   GPIO.setup(TRIG,GPIO.OUT)
   GPIO.setup(ECHO,GPIO.IN)
@@ -20,34 +21,34 @@ def reading(sensor):
   time.sleep(0.00001)
   GPIO.output(TRIG, False)
 
-  MAX_SIGNALL_OFF_PERIOD = 300
-  MAX_SIGNALL_ON_PERIOD = 8000
   signal_off = 0
-  signal_on  = 0
-
   k = 0
   while GPIO.input(ECHO) == 0:
     signal_off = time.time()
     k += 1
-    if k > MAX_SIGNALL_OFF_PERIOD:
-      signal_off = -1
+    if k > MAX_OFF:
+      signal_off = 0
       break
 
+  if signal_off == 0:
+    return -1
+
+  signal_on  = 0
   k = 0
   while GPIO.input(ECHO) == 1:
     signal_on = time.time()
     k += 1
-    if k > MAX_SIGNALL_ON_PERIOD:
-      signal_on = -1
+    if k > MAX_ON:
+      signal_on = 0
       break
 
-  if signal_on == -1 or signal_off == -1:
+  if signal_on == 0:
     return -1
-  else:
-    return (signal_on - signal_off) * 17000
-    GPIO.cleanup()
 
-# for _ in xrange(100):
+  distance = (signal_on - signal_off) * 17000
+  GPIO.cleanup()
+  return (signal_on - signal_off) * 17000
+
 while True:
-  print reading(0)
+  print reading()
   time.sleep(0.05)
