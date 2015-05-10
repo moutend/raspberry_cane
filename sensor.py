@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time, datetime, os, sys, signal
+import time
+import datetime
+import os
+import sys
+import signal
+import math
 import RPi.GPIO as GPIO
 from multiprocessing import Process, Pipe
 
@@ -32,46 +37,58 @@ def measure():
   time.sleep(0.00001)
   GPIO.output(TRIG, False)
 
-  limit_signal_off = 300
-  limit_signal_on  = 5000
+  limit_signal_off = 128
+  limit_signal_on  = 6400
   signal_off = 0
   signal_on  = 0
 
   while not GPIO.input(ECHO):
     signal_off = time.time()
     limit_signal_off -= 1
-    if limit_signal_off == 0: return 0
+    if limit_signal_off == 0: break
+  if limit_signal_off == 0: return -1
 
   while GPIO.input(ECHO):
     signal_on = time.time()
     limit_signal_on -= 1
-    if limit_signal_on == 0: return 0
+    if limit_signal_on == 0: break
+  if limit_signal_on == 0: return -2
 
   distance = (signal_on - signal_off) * 17000
   if distance <= 400.0:
     return distance
   else:
-    return 0
+    return -3
 
-def vibrate(pipe):
+def vibrate(n):
+  sec = float(n) / 1000
   while True:
-    distance = pipe.recv() / 1000
-    print("    %s" % distance)
+    print "        %s" % sec
     GPIO.output(VIBE, GPIO.LOW)
-    time.sleep(distance)
     GPIO.output(VIBE, True)
-    time.sleep(0.125)
+    time.sleep(0.05)
     GPIO.output(VIBE, False)
+    time.sleep(sec)
 
-signal.signal(signal.SIGINT, cleanup_GPIO)
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+if __name__ == '__main__':
+  signal.signal(signal.SIGINT, cleanup_GPIO)
+  sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
-parent_pipe, child_pipe = Pipe()
-vibration_process = Process(target=vibrate, args=(child_pipe,))
-vibration_process.start()
+  d1 = 999
+  j = 0
+  pid = -1
+  while True:
+    d2 = int(measure())
+    if d2 != 0:
+      print d2
+    if d2 != 0 and math.fabs(d1 - d2) > 10:
+      print j, datetime.datetime.now(), d2
+      d1 = d2
+      if pid != -1:
+        os.kill(pid, signal.SIGTERM)
+      p = Process(target=vibrate, args=(d1 * 2,))
+      p.start()
+      pid = p.pid
 
-while True:
-  distance = measure()
-  parent_pipe.send(distance)
-  print datetime.datetime.now(), distance
-  time.sleep(0.05)
+    j += 1
+    time.sleep(0.01)
