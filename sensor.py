@@ -14,19 +14,27 @@ TRIG = 11
 VIBE = 12
 ECHO = 13
 
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(TRIG,GPIO.OUT)
-GPIO.setup(VIBE, GPIO.OUT)
-GPIO.setup(ECHO,GPIO.IN)
+class Cue:
+  def __init__(self, size):
+    self.size = size
+    self.list = [0]
+
+  def push(self, item):
+    if len(self.list) >= self.size:
+      self.list.pop(0)
+    self.list.append(item)
+
+  def clear(self):
+    self.list = [0]
+
+  def get_mean(self):
+    return reduce(lambda x, y: x + y, self.list) / len(self.list)
 
 def cleanup_GPIO(signal, frame):
   GPIO.output(TRIG, GPIO.LOW)
   GPIO.output(TRIG, False)
   GPIO.output(VIBE, GPIO.LOW)
   GPIO.output(VIBE, False)
-  GPIO.output(ECHO, GPIO.LOW)
-  GPIO.output(ECHO, False)
 
   GPIO.cleanup()
   sys.exit(0)
@@ -37,8 +45,8 @@ def measure():
   time.sleep(0.00001)
   GPIO.output(TRIG, False)
 
-  limit_signal_off = 128
-  limit_signal_on  = 6400
+  limit_signal_off = 2568
+  limit_signal_on  = 8192
   signal_off = 0
   signal_on  = 0
 
@@ -60,10 +68,17 @@ def measure():
   else:
     return -3
 
-def vibrate(n):
-  sec = float(n) / 1000
+def shake():
+  for _ in range(2):
+    GPIO.output(VIBE, GPIO.LOW)
+    GPIO.output(VIBE, True)
+    time.sleep(0.05)
+    GPIO.output(VIBE, False)
+    time.sleep(0.05)
+
+def vibrate(sec):
+  time.sleep(0.1)
   while True:
-    print "        %s" % sec
     GPIO.output(VIBE, GPIO.LOW)
     GPIO.output(VIBE, True)
     time.sleep(0.05)
@@ -74,21 +89,48 @@ if __name__ == '__main__':
   signal.signal(signal.SIGINT, cleanup_GPIO)
   sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
 
-  d1 = 999
-  j = 0
+  GPIO.setwarnings(True)
+  GPIO.setmode(GPIO.BOARD)
+  GPIO.setup(TRIG,GPIO.OUT)
+  GPIO.setup(VIBE, GPIO.OUT)
+  GPIO.setup(ECHO,GPIO.IN)
+
+  d1 = -1
   pid = -1
+
+  if pid != -1:
+    os.kill(pid, signal.SIGTERM)
+  p = Process(target=vibrate, args=(0.75,))
+  p.daemon = True
+  p.start()
+  pid = p.pid
+
+  q = Cue(25)
+  q.clear()
+  flag = False
   while True:
-    d2 = int(measure())
-    if d2 != 0:
-      print d2
-    if d2 != 0 and math.fabs(d1 - d2) > 10:
-      print j, datetime.datetime.now(), d2
-      d1 = d2
-      if pid != -1:
-        os.kill(pid, signal.SIGTERM)
-      p = Process(target=vibrate, args=(d1 * 2,))
+    d2 = int(measure()) / 10
+    if d2 > 0:
+      q.push(d2)
+
+    if flag == False and  q.get_mean() < 7:
+      time.sleep(0.1)
+      os.kill(pid, signal.SIGTERM)
+      p = Process(target=vibrate, args=(0.125,))
+      p.daemon = True
       p.start()
       pid = p.pid
+      flag = True
 
-    j += 1
+    if flag == True and q.get_mean() >= 7:
+      time.sleep(0.1)
+      os.kill(pid, signal.SIGTERM)
+      p = Process(target=vibrate, args=(0.75,))
+      p.daemon = True
+      p.start()
+      pid = p.pid
+      flag = False
+
+    print datetime.datetime.now(), q.get_mean(), d2
+    d1 = d2
     time.sleep(0.01)
