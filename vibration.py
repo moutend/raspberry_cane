@@ -1,31 +1,41 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time, datetime, os, sys, signal
+import time
+import datetime
+import os
+import sys
+import signal
+import math
+import threading
 import RPi.GPIO as GPIO
+from multiprocessing import Process, Pipe
 
-TRIG    = 12
-
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(TRIG, GPIO.OUT)
+VIBE    = 12
 
 def cleanup_GPIO(signal, frame):
-  GPIO.output(TRIG, GPIO.LOW)
-  GPIO.output(TRIG, False)
+  GPIO.output(VIBE, GPIO.LOW)
+  GPIO.output(VIBE, False)
   GPIO.cleanup()
   sys.exit(0)
 
-def shake(sec):
-  GPIO.output(TRIG, GPIO.LOW)
-  GPIO.output(TRIG, True)
+def vibrate(sec):
+  GPIO.output(VIBE, GPIO.LOW)
+  GPIO.output(VIBE, True)
   time.sleep(sec)
-  GPIO.output(TRIG, False)
+  GPIO.output(VIBE, False)
   return sec
 
-signal.signal(signal.SIGINT, cleanup_GPIO)
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+def f(sec):
+  print datetime.datetime.now(), vibrate(0.0628)
+  threading.Timer(sec, f, args=[sec]).start()
 
-while True:
-  print datetime.datetime.now(), shake(0.125)
-  time.sleep(0.875)
+if __name__ == '__main__':
+  signal.signal(signal.SIGINT, cleanup_GPIO)
+  sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
+  GPIO.setwarnings(True)
+  GPIO.setmode(GPIO.BOARD)
+  GPIO.setup(VIBE, GPIO.OUT)
+
+  f(0.125)
