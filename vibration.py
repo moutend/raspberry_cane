@@ -38,4 +38,4 @@ if __name__ == '__main__':
   GPIO.setmode(GPIO.BOARD)
   GPIO.setup(VIBE, GPIO.OUT)
 
-  f(0.125)
+  f(0.25)
