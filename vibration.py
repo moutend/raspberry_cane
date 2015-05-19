@@ -28,7 +28,12 @@ def vibrate(sec):
 
 def f(sec):
   print datetime.datetime.now(), vibrate(0.0628)
-  threading.Timer(sec, f, args=[sec]).start()
+  t2 = time.time() + sec
+  t = threading.Timer(sec, f, args=[sec])
+  t.start()
+  while time.time() < t2:
+    print "tid %s" % t
+    time.sleep(0.125)
 
 if __name__ == '__main__':
   signal.signal(signal.SIGINT, cleanup_GPIO)
@@ -38,4 +43,4 @@ if __name__ == '__main__':
   GPIO.setmode(GPIO.BOARD)
   GPIO.setup(VIBE, GPIO.OUT)
 
-  f(0.25)
+  f(1.0)
