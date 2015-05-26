@@ -38,6 +38,16 @@ window.onload = function() {
   var ctx = canvas.getContext("2d")
   var dom_distance = document.querySelector("#distance")
   var dom_wrapper = document.querySelector("#wrapper")
+  var dom_console = document.querySelector("#console")
+
+  var log = function(line) {
+    dom_console.value += line
+    dom_console.scrollTop = dom_console.scrollHeight;
+  }
+  setInterval(function() {
+      dom_console.value = ""
+  }, 500)
+
   var show = function(distance) {
     dom_distance.innerHTML = distance
     if (distance <= 50) {
@@ -50,20 +60,22 @@ window.onload = function() {
       dom_wrapper.style.backgroundColor = color_scheme.blue
     }
   }
-  var __width = 8.0
+  var __width = 2.0
   var plot = function(element, index) {
+    if (element >= 240) {
+      element = 240
+    }
     ctx.beginPath()
-    ctx.lineCop = "round"
-    ctx.strokeStyle = "black"
-    ctx.moveTo(index * __width, 0)
+    ctx.strokeStyle = "gray"
+    ctx.moveTo(index * __width, Math.floor(element))
     ctx.lineWidth = __width
-    ctx.lineTo(index * __width, Math.floor(element))
+    ctx.lineTo(index * __width, 240)
     ctx.stroke()
     ctx.closePath()
   }
   var display = function(distance, data) {
     show(distance)
-    if (data.length >= 960 / __width) {
+    if (data.length >= 640 / __width) {
       data.shift()
     }
     data.push(distance)
@@ -75,11 +87,16 @@ window.onload = function() {
       getJSON("/data.json")
       .then(function(responce) {
         var distance = parseInt(responce.Distance)
+
+        log(+new Date() + " /data.json " + JSON.stringify(responce) + "\n")
+
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        data = display(distance %% 240, data)
-        kick(elem, data)
+        kick(elem, display(distance, data))
       }, function(err) {
-        console.info(err)
+        log(+new Date() + " /data.json " + err)
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        kick(elem, data)
       })
     }, 50)
   }
@@ -97,29 +114,46 @@ window.onload = function() {
   font-family: "Liberation Mono", Consolas, Courier, monospace, sans-serif;
 }
 #distance {
-  font-size: 212px;
+  display: block;
+  padding-top: .5em;
+  padding-right: .75em;
+  font-size: 80px;
 }
 #unit {
-  padding: 0 16%% 0 4%%;
-  font-size: 144px;
+  display: block;
+  text-align: center;
+  font-size: 40px;
+}
+#canvas {
+  display: white;
 }
 #wrapper {
-  width: 980px;
+  float: left;
+  display: block;
+  width: 300px;
   height: 240px;
+  text-align: right;
   background-color: #AAA;
   color: #FFF;
-  text-align: right;
   text-shadow: 0 0 160px #000;
-  line-height: 240px;
+}
+#console {
+  display: block;
+  padding-top: .5em;
+  padding-left: 1em;
+  font-size: 20px;
+  width: 944px;
+  height: 240px;
+  background-color: #333;
+  color: #fff;
 }
   </style>
   <body>
     <div id="wrapper">
-      <span class="code" id="distance">123</span>
+      <span class="code" id="distance">0</span>
       <span class="code" id="unit">cm</span>
-    </div>
-    <canvas id="canvas" width="960px" height="240px">
+    </div><canvas id="canvas" width="640px" height="240px">
       Use Chrome or safari.
-    </canvas>
+    </canvas><textarea class="code" id="console"></textarea>
   </body>
 </html>
